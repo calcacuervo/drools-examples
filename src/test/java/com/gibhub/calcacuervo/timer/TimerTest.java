@@ -1,5 +1,7 @@
 package com.gibhub.calcacuervo.timer;
 
+import java.text.ParseException;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
@@ -10,6 +12,7 @@ import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.conf.ClockTypeOption;
 import org.kie.api.runtime.rule.FactHandle;
 import org.kie.api.runtime.rule.QueryResults;
+import org.kie.api.time.Calendar;
 
 import com.gibhub.calcacuervo.common.TestResources;
 import com.gibhub.calcacuervo.common.TestRuleUtils;
@@ -109,16 +112,79 @@ public class TimerTest {
 		// now, we may have sent 2 reminders.
 		Assert.assertEquals(2, getAmountOfReminders(ksession));
 	}
-	
+
+	@Test
+	public void test_send_reminder_with_quartz_calendar() throws ParseException {
+		// first, we need to create the Kie Session.
+		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
+				.withResources(TestResources.REMINDER_WITH_CALENDAR.getResource())
+				.withKieSessionOption(ClockTypeOption.get("pseudo")).build();
+		TimeZone tzone = TimeZone.getTimeZone("GMT");
+		TimeZone.setDefault(tzone);
+		final org.quartz.impl.calendar.DailyCalendar businessHours = new org.quartz.impl.calendar.DailyCalendar(8, 0, 0, 0, 16, 0, 0, 0);
+		businessHours.setInvertTimeRange(true);
+		Calendar adapted = new Calendar() {
+
+			public boolean isTimeIncluded(long timestamp) {
+				return businessHours.isTimeIncluded(timestamp);
+			}
+		};
+		ksession.getCalendars().set("cron", adapted);
+		// now, create a customer who did the payment of the subscription.
+		Customer customer = new Customer("Demian");
+		FactHandle customerFactHandle = ksession.insert(customer);
+		ksession.fireAllRules();
+		Assert.assertEquals(0, getAmountOfReminders(ksession));
+
+		// until now, no reminder has been sent.
+		// but now, we set the customer as not have done the latest payment.
+		customer.setSuscriptionPaymentDone(false);
+
+		// we have to update the ksession.
+		ksession.update(customerFactHandle, customer);
+		ksession.fireAllRules();
+
+		// now, we may have sent no reminder, as we do at the begining of the
+		// day.
+		Assert.assertEquals(0, getAmountOfReminders(ksession));
+
+		// 9 hours passes, a reminder be sent, as we are in GMT 9AM (pseudo clock starts at time 0!)
+		SessionPseudoClock clock = ksession.getSessionClock();
+		clock.advanceTime(9, TimeUnit.HOURS);
+		ksession.update(customerFactHandle, customer);
+		ksession.fireAllRules();
+		// now, we may have sent 1 reminder.
+		Assert.assertEquals(1, getAmountOfReminders(ksession));
+
+		// another day passes, a reminder should have been sent.
+		clock.advanceTime(1, TimeUnit.DAYS);
+		ksession.update(customerFactHandle, customer);
+		ksession.fireAllRules();
+		// now, we may have sent 2 reminders.
+		Assert.assertEquals(2, getAmountOfReminders(ksession));
+
+		// now, the user have done the payment.
+		customer.setSuscriptionPaymentDone(true);
+		ksession.update(customerFactHandle, customer);
+
+		// so, after another day
+		clock.advanceTime(1, TimeUnit.DAYS);
+		ksession.fireAllRules();
+
+		// no new reminders have been sent.
+		// now, we may have sent 2 reminders.
+		Assert.assertEquals(2, getAmountOfReminders(ksession));
+	}
+
 	@Test
 	public void test_send_reminder_expression() {
 		// first, we need to create the Kie Session.
 		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
 				.withResources(TestResources.REMINDER_WITH_EXPRESSION.getResource())
 				.withKieSessionOption(ClockTypeOption.get("pseudo")).build();
-	
+
 		ksession.insert(new TimerSettings("30s", 60000));
-		
+
 		// now, create a customer who did the payment of the subscription.
 		Customer customer = new Customer("Demian");
 		FactHandle customerFactHandle = ksession.insert(customer);
@@ -142,6 +208,7 @@ public class TimerTest {
 		// now, we may have sent 1 reminders.
 		Assert.assertEquals(1, getAmountOfReminders(ksession));
 
+		// after the first delay, advance 61 seconds..
 		clock.advanceTime(61, TimeUnit.SECONDS);
 		ksession.fireAllRules();
 		// now, we may have sent 2 reminders.
@@ -159,7 +226,6 @@ public class TimerTest {
 		// now, we may have sent 2 reminders.
 		Assert.assertEquals(2, getAmountOfReminders(ksession));
 	}
-	
 
 	private int getAmountOfReminders(KieSession ksession) {
 		QueryResults results = ksession.getQueryResults("get reminders");
