@@ -61,7 +61,7 @@ public class TestRuleUtils {
 				System.out.print(msg);
 			}
 			throw new RuntimeException(
-					"There where some errors compiling kbase.");
+					"There where some errors while compiling kbase.");
 		}
 		ReleaseId rel = kbuilder.getKieModule().getReleaseId();
 		KieContainer kcontainer = ks.newKieContainer(rel);
@@ -74,7 +74,9 @@ public class TestRuleUtils {
 		for (KieSessionOption opt : ksessionOptions) {
 			ksc.setOption(opt);
 		}
-		return kbase.newKieSession(ksc, null);
+		KieSession ksession = kbase.newKieSession(ksc, null);
+		ks.getLoggers().newConsoleLogger(ksession);
+		return ksession;
 	}
 
 }
