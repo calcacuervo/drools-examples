@@ -20,7 +20,7 @@ import com.gibhub.calcacuervo.common.TestRuleUtils;
 public class TimerTest {
 
 	@Test
-	public void test_send_reminder_interval() {
+	public void testSendReminderWithIntervalTimer_shouldSendReminder() {
 		// first, we need to create the Kie Session.
 		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
 				.withResources(TestResources.REMINDER_WITH_INTERVAL.getResource())
@@ -60,10 +60,13 @@ public class TimerTest {
 		// no new reminders have been sent.
 		// now, we may have sent 2 reminders.
 		Assert.assertEquals(2, getAmountOfReminders(ksession));
+
+		// dispose the ksession.
+		ksession.dispose();
 	}
 
 	@Test
-	public void test_send_reminder_cron() {
+	public void testSendReminderWithCronTimer_shouldSendReminder() {
 		// first, we need to create the Kie Session.
 		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
 				.withResources(TestResources.REMINDER_WITH_CRON.getResource())
@@ -114,14 +117,15 @@ public class TimerTest {
 	}
 
 	@Test
-	public void test_send_reminder_with_quartz_calendar() throws ParseException {
+	public void testSendReminderWithQuartzCalendar_shouldSendReminder() throws ParseException {
 		// first, we need to create the Kie Session.
 		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
 				.withResources(TestResources.REMINDER_WITH_CALENDAR.getResource())
 				.withKieSessionOption(ClockTypeOption.get("pseudo")).build();
 		TimeZone tzone = TimeZone.getTimeZone("GMT");
 		TimeZone.setDefault(tzone);
-		final org.quartz.impl.calendar.DailyCalendar businessHours = new org.quartz.impl.calendar.DailyCalendar(8, 0, 0, 0, 16, 0, 0, 0);
+		final org.quartz.impl.calendar.DailyCalendar businessHours = new org.quartz.impl.calendar.DailyCalendar(8, 0,
+				0, 0, 16, 0, 0, 0);
 		businessHours.setInvertTimeRange(true);
 		Calendar adapted = new Calendar() {
 
@@ -148,7 +152,8 @@ public class TimerTest {
 		// day.
 		Assert.assertEquals(0, getAmountOfReminders(ksession));
 
-		// 9 hours passes, a reminder be sent, as we are in GMT 9AM (pseudo clock starts at time 0!)
+		// 9 hours passes, a reminder be sent, as we are in GMT 9AM (pseudo
+		// clock starts at time 0!)
 		SessionPseudoClock clock = ksession.getSessionClock();
 		clock.advanceTime(9, TimeUnit.HOURS);
 		ksession.update(customerFactHandle, customer);
@@ -177,7 +182,72 @@ public class TimerTest {
 	}
 
 	@Test
-	public void test_send_reminder_expression() {
+	public void testSendReminderWithQuartzCalendarAndTimer_shouldSendReminder() throws ParseException {
+		// first, we need to create the Kie Session.
+		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
+				.withResources(TestResources.REMINDER_WITH_CALENDAR_AND_TIMER.getResource())
+				.withKieSessionOption(ClockTypeOption.get("pseudo")).build();
+		TimeZone tzone = TimeZone.getTimeZone("GMT");
+		TimeZone.setDefault(tzone);
+		final org.quartz.impl.calendar.DailyCalendar businessHours = new org.quartz.impl.calendar.DailyCalendar(8, 0,
+				0, 0, 16, 0, 0, 0);
+		businessHours.setInvertTimeRange(true);
+		Calendar adapted = new Calendar() {
+
+			public boolean isTimeIncluded(long timestamp) {
+				return businessHours.isTimeIncluded(timestamp);
+			}
+		};
+		ksession.getCalendars().set("cron", adapted);
+		// now, create a customer who did the payment of the subscription.
+		Customer customer = new Customer("Demian");
+		FactHandle customerFactHandle = ksession.insert(customer);
+		ksession.fireAllRules();
+		Assert.assertEquals(0, getAmountOfReminders(ksession));
+
+		// until now, no reminder has been sent.
+		// but now, we set the customer as not have done the latest payment.
+		customer.setSuscriptionPaymentDone(false);
+
+		// we have to update the ksession.
+		ksession.update(customerFactHandle, customer);
+		ksession.fireAllRules();
+
+		// now, we may have sent no reminder, as we do at the begining of the
+		// day.
+		Assert.assertEquals(0, getAmountOfReminders(ksession));
+
+		// 9 hours passes, a reminder be sent, as we are in GMT 9AM (pseudo
+		// clock starts at time 0!)
+		SessionPseudoClock clock = ksession.getSessionClock();
+		clock.advanceTime(9, TimeUnit.HOURS);
+		ksession.update(customerFactHandle, customer);
+		ksession.fireAllRules();
+		// now, we may have sent 1 reminder.
+		Assert.assertEquals(1, getAmountOfReminders(ksession));
+
+		// now, it should be repeated in 15 minutes!
+		clock.advanceTime(15, TimeUnit.MINUTES);
+		ksession.update(customerFactHandle, customer);
+		ksession.fireAllRules();
+		// now, we may have sent 2 reminders.
+		Assert.assertEquals(2, getAmountOfReminders(ksession));
+
+		// now, the user have done the payment.
+		customer.setSuscriptionPaymentDone(true);
+		ksession.update(customerFactHandle, customer);
+
+		// so, after another day
+		clock.advanceTime(1, TimeUnit.DAYS);
+		ksession.fireAllRules();
+
+		// no new reminders have been sent.
+		// now, we may have sent 2 reminders.
+		Assert.assertEquals(2, getAmountOfReminders(ksession));
+	}
+
+	@Test
+	public void testSendReminderWithExpresionTimer_shouldSendReminder() {
 		// first, we need to create the Kie Session.
 		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
 				.withResources(TestResources.REMINDER_WITH_EXPRESSION.getResource())
@@ -225,6 +295,57 @@ public class TimerTest {
 		// no new reminders have been sent.
 		// now, we may have sent 2 reminders.
 		Assert.assertEquals(2, getAmountOfReminders(ksession));
+	}
+
+	// Now, some examples with fire until halt!
+	@Test
+	public void testSendReminderWithCron_withFireUntilHalt_shouldSendReminder() {
+		// first, we need to create the Kie Session.
+		KieSession ksession = new TestRuleUtils().new KieSessionBuilder()
+				.withResources(TestResources.REMINDER_WITH_CRON.getResource())
+				.withKieSessionOption(ClockTypeOption.get("pseudo")).withFireUntilHalt(true).build();
+
+		// now, create a customer who did the payment of the subscription.
+		Customer customer = new Customer("Demian");
+		FactHandle customerFactHandle = ksession.insert(customer);
+		Assert.assertEquals(0, getAmountOfReminders(ksession));
+		
+		// until now, no reminder has been sent.
+		// but now, we set the customer as not have done the latest payment.
+		customer.setSuscriptionPaymentDone(false);
+
+		// we have to update the ksession.
+		ksession.update(customerFactHandle, customer);
+		// now, we may have sent no reminder, as we do at the begining of the
+		// day.
+		Assert.assertEquals(0, getAmountOfReminders(ksession));
+
+		// 1 day passes, a reminder should have been sent.
+		SessionPseudoClock clock = ksession.getSessionClock();
+		clock.advanceTime(1, TimeUnit.DAYS);
+		ksession.fireAllRules();
+		// now, we may have sent 1 reminder.
+		Assert.assertEquals(1, getAmountOfReminders(ksession));
+
+		// another day passes, a reminder should have been sent.
+		clock.advanceTime(1, TimeUnit.DAYS);
+		ksession.fireAllRules();
+		// now, we may have sent 2 reminders.
+		Assert.assertEquals(2, getAmountOfReminders(ksession));
+
+		// now, the user have done the payment.
+		customer.setSuscriptionPaymentDone(true);
+		ksession.update(customerFactHandle, customer);
+
+		// so, after another day
+		clock.advanceTime(1, TimeUnit.DAYS);
+		ksession.fireAllRules();
+		// no new reminders have been sent.
+		// now, we may have sent 2 reminders.
+		Assert.assertEquals(2, getAmountOfReminders(ksession));
+
+		// dispose the session.
+		ksession.dispose();
 	}
 
 	private int getAmountOfReminders(KieSession ksession) {

@@ -1,0 +1,23 @@
+import com.gibhub.calcacuervo.timer.Reminder;
+import com.gibhub.calcacuervo.timer.ReminderMessages;
+import com.gibhub.calcacuervo.timer.Customer;
+
+rule "Send Reminder to Customer every day"
+   calendars "cron"
+   timer (int: 0 15m)
+when
+	c: Customer ( suscriptionPaymentDone == false )
+then
+	insert (new Reminder(ReminderMessages.PAYMENT_NOT_DONE.getMessage()));
+end
+
+rule "Print message"
+when
+	r: Reminder ( )
+then
+	System.out.println(r.getMessage());
+end
+
+query "get reminders" 
+    reminder : Reminder()
+end
