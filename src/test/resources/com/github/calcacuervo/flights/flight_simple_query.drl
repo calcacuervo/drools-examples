@@ -1,9 +1,0 @@
-import com.gibhub.calcacuervo.flights.Flight;
-
-rule "Fights To Argentina"    
-when    
-	f: Flight ( To == "Argentina" )
-then
-	System.out.println(f.toString());
-end
-
