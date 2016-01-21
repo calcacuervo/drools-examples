@@ -1,7 +1,7 @@
-import com.gibhub.calcacuervo.timer.Reminder;
-import com.gibhub.calcacuervo.timer.ReminderMessages;
-import com.gibhub.calcacuervo.timer.Customer;
-import com.gibhub.calcacuervo.timer.TimerSettings;
+import com.github.calcacuervo.models.Reminder;
+import com.github.calcacuervo.models.ReminderMessages;
+import com.github.calcacuervo.models.Customer;
+import com.github.calcacuervo.models.TimerSettings;
 
 rule "Send Reminder to Customer every minute with 30 second delay"
     timer( expr: $d, $p; repeat-limit=5 )

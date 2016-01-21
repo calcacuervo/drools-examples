@@ -1,4 +1,4 @@
-package com.gibhub.calcacuervo.common;
+package com.github.calcacuervo.common;
 
 import java.util.ArrayList;
 import java.util.Arrays;

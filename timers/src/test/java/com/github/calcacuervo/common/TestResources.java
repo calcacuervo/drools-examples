@@ -1,4 +1,4 @@
-package com.gibhub.calcacuervo.common;
+package com.github.calcacuervo.common;
 
 public enum TestResources {
 	REMINDER_WITH_INTERVAL("com/github/calcacuervo/timer/reminder_with_interval.drl"),

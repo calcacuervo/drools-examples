@@ -1,4 +1,4 @@
-package com.gibhub.calcacuervo.timer;
+package com.github.calcacuervo.timer;
 
 import java.text.ParseException;
 import java.util.TimeZone;
@@ -14,8 +14,10 @@ import org.kie.api.runtime.rule.FactHandle;
 import org.kie.api.runtime.rule.QueryResults;
 import org.kie.api.time.Calendar;
 
-import com.gibhub.calcacuervo.common.TestResources;
-import com.gibhub.calcacuervo.common.TestRuleUtils;
+import com.github.calcacuervo.common.TestResources;
+import com.github.calcacuervo.common.TestRuleUtils;
+import com.github.calcacuervo.models.Customer;
+import com.github.calcacuervo.models.TimerSettings;
 
 public class TimerTest {
 
