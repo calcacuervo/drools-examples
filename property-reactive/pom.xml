@@ -7,11 +7,11 @@
 		<version>1.0-SNAPSHOT</version>
 	</parent>
 	<groupId>com.github.calcacuervo</groupId>
-	<artifactId>drools-examples-timer</artifactId>
+	<artifactId>drools-examples-property-reactive</artifactId>
 	<version>1.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>drools-examples</name>
+	<name>drools-examples-property-reactive</name>
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

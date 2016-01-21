@@ -1,0 +1,20 @@
+import com.github.calcacuervo.models.SubscriptionType;
+import com.github.calcacuervo.models.Customer;
+
+rule "Upgrade Gold"
+no-loop
+when
+	c: Customer ( ageAsCustomer > 3) @Watch (ageAsCustomer)
+then
+	c.setSubscriptionType(SubscriptionType.GOLD);
+	update(c);
+end
+
+rule "Upgrade Platinium"
+no-loop
+when
+	c: Customer ( ageAsCustomer > 5 ) @Watch (ageAsCustomer)
+then
+	c.setSubscriptionType(SubscriptionType.PLATINUM);
+	update(c);
+end
