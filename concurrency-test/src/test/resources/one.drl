@@ -1,0 +1,11 @@
+import com.github.calcacuervo.Holder;
+
+rule "one"
+no-loop
+when
+	$h: Holder(origVal == "1")
+then
+	$h.sessionVal = "one";
+	System.out.println($h);
+	update($h);
+end
