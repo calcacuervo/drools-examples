@@ -3,7 +3,7 @@ import com.github.calcacuervo.Holder;
 rule "one"
 no-loop
 when
-	$h: Holder(origVal == "1")
+	$h: Holder()
 then
 	$h.sessionVal = "one";
 	System.out.println($h);
